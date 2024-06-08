@@ -126,7 +126,6 @@ local _get_bucket_id_host_for_key = function(key)
 end
 
 local _encode_request_pack = function(opCode, key, vBucketId, uuid)
-  local byteChar = string.char(0x0)
   local magicCode = 128
   local opCode = opCode or 0
   local keyLength = #key

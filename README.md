@@ -89,3 +89,22 @@ index 098107f7a..3a86dcf1d 100644
 ~
 ~
 ```
+
+# TODOs:
+## Upstream changes
+1. Create an upstream patch to support certs in lua socket. we can reference httpclient to do the same.
+2. Haproxy Lua socket doesn't provide different timeout settings like read/write/overall etc. We can enhance that to support all relevant timeouts. Upstream patch is required.
+3. HAProxy lua socket doesn't allow dns resolution. Since httpclient supports dns resolution by providing resolver name, we can refer that to build similar support. Another upstream patch required for this.
+
+## Features
+1. Add support for set-key
+2. Add support for other commands on memcached protocol
+   
+## Tests
+1. Add different tests(end to end tests) to cover different scenarios
+2. Add more unit tests
+
+## Load test numbers
+1. Do some more testing and share the numbers
+
+## Documentation
