@@ -64,31 +64,67 @@ local function run_couchbase_adapter()
   end
 end
 
+
 local function get_cb_key(txn)
   local key = txn:get_var("txn.cbkey")
   local uuid = txn.f:rand(65536)
-    local cb_result = nil
-    -- print("cb_test: get_cb_key: ", key, uuid)
-    cb_request_queue:push({key, uuid, core.now()})
-    local i = 1
-    while i < 6 do
-      core.msleep(1)
-      -- cb_result = cb_result_map[key]
-      -- print("cb_test:  cb_result_map: ",utility.dump(cb_result_map))
-      cb_result = cb_result_map[uuid]
-      if cb_result  then
-        break
-      end 
-      i = i + 1
-    end
-    print("cb_test: found after n ms: ", i)
-    if cb_result and cb_result[1] then
-      txn:set_var("txn.cbvalue", cb_result[1])
-    else
-      print("cb_test: cb_result is empty")
+  -- print("haproxy_lua_couchbase: get_cb_key: key, uuid: ", key, uuid)
+  local vBucket, cb_host = couchbase.get_bucket_id_host_for_key(key)
+  local cb_cmd = couchbase.encode_request_pack(0, key, vBucket, uuid)
+  local cb_client = couchbase.get_cb_client(cb_host)
+  if not cb_client then
+    print("haproxy_lua_couchbase: cb_client is nil, trying on emore time")
+    cb_client = couchbase.get_cb_client(cb_host)
+    if not cb_client then
+      print("haproxy_lua_couchbase: cb_client is nil, returning")
       txn:set_var("txn.cbvalue", "")
+      return
     end
-    cb_result_map[key] = nil
+  end
+
+  local err = couchbase.send_get_key_cmd(cb_client, cb_cmd)
+  if err then
+   
+    print("cb_test: cb_result is empty")
+    txn:set_var("txn.cbvalue", "")
+    return
+  end
+
+  local i = 1
+  while i < 6 do
+    cb_client = couchbase.get_cb_client(cb_host)
+    local response_data, response_uuid, err  = couchbase.recieve_get_key_cmd(cb_client)
+    -- print("haproxy_lua_couchbase: response_data, response_uuid, err: ", response_data, " :",  response_uuid, " :", err)
+    if err then
+      print("haproxy_lua_couchbase: error in teh connection:", err)
+      txn:set_var("txn.cbvalue", "")
+      print("resetting cb client")
+      couchbase.reset_cb_client(cb_host, cb_client)
+      return
+    end
+    if response_uuid == uuid then
+      if response_data then
+        txn:set_var("txn.cbvalue", response_data)
+      else
+        txn:set_var("txn.cbvalue", "")
+      end
+      
+      return
+    elseif response_uuid then
+      cb_result_map[response_uuid] = response_data
+      -- may be someone else got the result from the cb. 
+      -- lets check the map
+      local cb_result = cb_result_map[uuid]
+      if cb_result  then
+        txn:set_var("txn.cbvalue", "")
+        table.remove(cb_result_map, uuid)
+        return
+      end
+    else
+      print("cb_test: error in recieve_get_key_cmd: ", err)
+    end
+    i = i + 1
+  end    
 end
 
 core.register_task(run_couchbase_adapter)

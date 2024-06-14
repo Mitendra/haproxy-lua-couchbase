@@ -89,7 +89,7 @@ local function _get_tcp_connection_using_haproxy(host_ip, port)
   -- else
   --   print("couchbase_core: TCP keep-alive enabled")
   -- end
-  local r = cb_client:settimeout(5)
+  -- local r = cb_client:settimeout(5)
   if _M.shared_data.use_ssl then
     print("couchbase_core: using ssl")
     r = cb_client:connect_ssl(host_ip, port)
@@ -413,6 +413,15 @@ local _get_cb_client = function(cb_host)
   return cb_client  
 end
 
+local _reset_cb_client = function(cb_host, cb_client)
+  if cb_client then
+    cb_client:close()
+  end
+  if _M.shared_data.host_client_map[cb_host] then
+    _M.shared_data.host_client_map[cb_host] = nil
+  end
+end
+
 local _get_cb_key = function(key, req_uuid)
   local bucket_id, cb_host = _get_bucket_id_host_for_key(key)
 --  print("couchbase_core: cb_host: ", cb_host)
@@ -452,4 +461,7 @@ _M.run_batch_get_key = _run_batch_get_key
 _M.get_bucket_id_host_for_key = _get_bucket_id_host_for_key
 _M.encode_request_pack = _encode_request_pack
 _M.get_cb_client = _get_cb_client
+_M.send_get_key_cmd = _send_get_key_cmd
+_M.recieve_get_key_cmd = _recieve_get_key_cmd
+_M.reset_cb_client = _reset_cb_client
 return _M
