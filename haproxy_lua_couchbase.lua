@@ -1,13 +1,13 @@
 local utility = require("utility")
 local args = table.pack(...)
 -- first argument is the path to the lua script
-local cb_bootstrap_host = args[2] -- or "cb001.example.com"
-local cb_bootstrap_port = args[3] -- or 11207
-local cb_bucket_name = args[4] -- or "sample-bucket"
-local use_ssl = utility.str_to_bool(args[5]) -- or false
-local dns_server = args[6] -- or "127.0.0.1"
-local dns_port = args[7] -- or 53
-local dns_query_type = args[8] -- or "A"
+local cb_bootstrap_host = args[1] -- or "cb001.example.com"
+local cb_bootstrap_port = args[2] -- or 11207
+local cb_bucket_name = args[3] -- or "sample-bucket"
+local use_ssl = utility.str_to_bool(args[4]) -- or false
+local dns_server = args[5] -- or "127.0.0.1"
+local dns_port = args[6] -- or 53
+local dns_query_type = args[7] -- or "A"
 
 local core = core
 local cb_request_queue = core.queue()
@@ -16,9 +16,11 @@ local initialized = false
 local cb_result_map = {}
 local function run_couchbase_adapter()
   if not initialized then
-    print("haproxy_lua_couchbase: cb_bootstrap_host, cb_bootstrap_port, cb_bucket_name, use_ssl, dns_server, dns_port, dns_query_type",
-    cb_bootstrap_host, cb_bootstrap_port, cb_bucket_name, use_ssl, dns_server, dns_port, dns_query_type)
+    print("haproxy_lua_couchbase: cb_bootstrap_host, cb_bootstrap_port, cb_bucket_name, use_ssl, dns_server, dns_port, dns_query_type")
+    print("haproxy_lua_couchbase: ", cb_bootstrap_host, cb_bootstrap_port, cb_bucket_name, use_ssl, dns_server, dns_port, dns_query_type )
+    
     couchbase.init_session(cb_bootstrap_host, cb_bootstrap_port, cb_bucket_name, use_ssl, dns_server, dns_port, dns_query_type)
+    initialized = true
     core.msleep(100)
   end
   while true do
@@ -100,7 +102,6 @@ local function get_cb_key(txn)
       txn:set_var("txn.cbvalue", "")
       print("resetting cb client")
       couchbase.reset_cb_client(cb_host, cb_client)
-      return
     end
     if response_uuid == uuid then
       if response_data then

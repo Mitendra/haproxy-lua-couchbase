@@ -3,8 +3,6 @@ local get_env_var = utility.get_env_var
 local get_env_var_as_bool = utility.get_env_var_as_bool
 local use_socket = get_env_var_as_bool("use_socket", false)
 print("couchbase_core: use_socket: ", use_socket)
--- local use_mock = get_env_var_as_bool("use_mock", true)
--- print("couchbase_core: use_mock: ", use_mock)
 local core = core
 local printByteArray = utility.printByteArray
 local stringToByteArray = utility.stringToByteArray
@@ -89,7 +87,8 @@ local function _get_tcp_connection_using_haproxy(host_ip, port)
   -- else
   --   print("couchbase_core: TCP keep-alive enabled")
   -- end
-  -- local r = cb_client:settimeout(5)
+  local r = cb_client:settimeout(10)
+  -- local r = cb_client:settimeout(2, "r")
   if _M.shared_data.use_ssl then
     print("couchbase_core: using ssl")
     r = cb_client:connect_ssl(host_ip, port)
@@ -98,7 +97,7 @@ local function _get_tcp_connection_using_haproxy(host_ip, port)
     r = cb_client:connect(host_ip, port)
   end
 
-  r = cb_client:settimeout(10)
+  -- r = cb_client:settimeout(100)
   return cb_client
 
 
@@ -265,8 +264,8 @@ end
 
 local run_cb_command = function(cb_client, command, uuid)
  -- print("couchbase_core: run cb command")
-  --print("couchbase_core: request bytes")
-  --utility.printByteArray(utility.stringToByteArray(command))
+  -- print("couchbase_core: request bytes")
+  -- utility.printByteArray(utility.stringToByteArray(command))
   local bytes_sent, err = cb_client:send(command)
   if err then
     print("couchbase_core: err: ", err)
@@ -279,15 +278,15 @@ local run_cb_command = function(cb_client, command, uuid)
       print("couchbase_core: Error receiving data: " .. err)
       return "", nil, err
   end
-  --print("couchbase_core: prinitng the response header:")
-  --utility.printByteArray(utility.stringToByteArray(response_header))
+  -- print("couchbase_core: prinitng the response header:")
+  -- utility.printByteArray(utility.stringToByteArray(response_header))
   if type(response_header) ~= "string" then
      print("couchbase_core: response_header is not string")
      print("couchbase_core: header: ", utility.dump(response_header))
      return "", nil, "not a string"
   end
   local response_length = string.unpack(">I4", response_header, 9)
- -- print("couchbase_core: response length", response_length)
+  -- print("couchbase_core: response length", response_length)
 
   local response_uuid = string.unpack(">I4", response_header, 13)
   -- print("couchbase_core: **** response uuid: ", uuid)
@@ -301,6 +300,7 @@ local run_cb_command = function(cb_client, command, uuid)
   end
    
   if response_length == 0 then
+    -- print("couchbase_core: response length is 0")
     return "", uuid, nil
   end
   local response_data, err = cb_client:receive(response_length)
@@ -308,8 +308,8 @@ local run_cb_command = function(cb_client, command, uuid)
     print("couchbase_core: Error receiving response data: " .. err)
     return response_data, uuid, err
   end
- -- print("couchbase_core: response bytes")
--- utility.printByteArray(utility.stringToByteArray( response_data))
+  -- print("couchbase_core: response bytes")
+  -- utility.printByteArray(utility.stringToByteArray( response_data))
   return response_data, uuid, nil
 end
 
@@ -327,7 +327,7 @@ end
 
 
 local extract_bucket_details = function(config_json)
-   --print("couchbase_core: config_json:", config_json)
+  -- print("couchbase_core: config_json:", config_json)
   -- read local file
   local obj, pos, err = json.decode (config_json, 1, nil)
   if err then
@@ -345,8 +345,8 @@ end
 --_M.mt.__index.update_cluster_config = function()
 local update_cluster_config = function(cb_client)
     local command = _encode_request_pack(CB_CMD_GET_CLUSTER_CONFIG, '', 0)
-  --print("couchbase_core: command:  CB_CMD_GET_CLUSTER_CONFIG")
-  --printByteArray(stringToByteArray(command))
+  -- print("couchbase_core: command:  CB_CMD_GET_CLUSTER_CONFIG")
+  -- printByteArray(stringToByteArray(command))
   local config, uuid, err = run_cb_command(cb_client, command, 0)
   if err then
     return nil, nil, err
@@ -384,7 +384,7 @@ local _init_session = function(hostname, port, bucket_name, use_ssl, dns_server,
   end
 --  print("couchbase_core: response for CB_CMD_HELLO: ", config, " : ")
   command = _encode_request_pack(CB_CMD_SELECT_BUCKET, bucket_name, 0)
-  --printByteArray(stringToByteArray(command))
+  -- printByteArray(stringToByteArray(command))
   config, uuid, err = run_cb_command(cb_client, command, 0)
   if err then
     print("couchbase_core: CB_CMD_SELECT_BUCKET errored out:", err)
