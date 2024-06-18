@@ -222,6 +222,7 @@ local _recieve_get_key_cmd = function(cb_client)
     print("couchbase_core: Error receiving response data: " .. err)
     return response_data, response_uuid, err
   end
+  -- print("couchbase_core: response bytes: ", response_data) 
   return response_data, response_uuid, nil
 
 end
